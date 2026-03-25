@@ -147,8 +147,8 @@ process {
             }
             $disk | Initialize-Disk -PartitionStyle GPT
             $partition = New-Partition -DiskNumber $disk.Number @partitionParams -UseMaximumSize
-            $partition | Format-Volume -FileSystem NTFS -NewFileSystemLabel $textInfo.ToTitleCase($config.volumeLabel)
-            Write-Log -Object "Disk Formatting" -Message "Formatted disk:$($disk.Number) lun:$($config.lun) driveLetter:$($partition.DriveLetter) volumeLabel:$($textInfo.ToTitleCase($config.volumeLabel))" -Severity Information -LogPath $LogPath
+            $partition | Format-Volume -FileSystem NTFS -NewFileSystemLabel $config.volumeLabel
+            Write-Log -Object "Disk Formatting" -Message "Formatted disk:$($disk.Number) lun:$($config.lun) driveLetter:$($partition.DriveLetter) volumeLabel:$($config.volumeLabel)" -Severity Information -LogPath $LogPath
         }
     }
 }
