@@ -126,7 +126,26 @@ process {
     [array]$dataDisks = Get-Disk | Where-Object { ($_.IsSystem -eq $false) -and ($_.PartitionStyle -eq 'RAW') }
     if ($dataDisks) {
         foreach ($disk in $dataDisks) {
-            $config = $diskConfigArray | Where-Object { $_.lun -eq ($disk.Location -split 'LUN ')[1] }
+            $diskLun = $null
+            if ($disk.Location -match '(?i)\bLUN\D*(\d+)\b') {
+                $diskLun = $matches[1]
+            }
+            elseif ($disk.LocationPath -match '(?i)\bLUN\D*(\d+)\b') {
+                $diskLun = $matches[1]
+            }
+
+            $config = $diskConfigArray | Where-Object { $_.lun -eq $diskLun }
+
+            # If LUN parsing fails but there is only one config entry, apply it to the only raw disk.
+            if (($null -eq $config) -and ($diskConfigArray.Count -eq 1)) {
+                $config = $diskConfigArray[0]
+                Write-Log -Object "Disk Formatting" -Message "Unable to parse LUN from disk location '$($disk.Location)'. Falling back to single diskConfig entry." -Severity Warning -LogPath $LogPath
+            }
+
+            if ($null -eq $config) {
+                Write-Log -Object "Disk Formatting" -Message "No diskConfig match for disk:$($disk.Number) location:'$($disk.Location)'. Using automatic drive letter and no label." -Severity Warning -LogPath $LogPath
+            }
+
             $usedDriveLetters = (Get-Volume).driveLetter | Sort-Object
             if ([string]::IsNullOrEmpty($config.driveLetter)) {
                 $partitionParams = @{
