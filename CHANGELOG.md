@@ -1,3 +1,9 @@
+## v0.2.3 (2026-04-17)
+
+### Fix
+
+- refine data disk selection criteria in disk-format.ps1 (#4)
+
 ## v0.2.2 (2025-02-28)
 
 ### Fix
