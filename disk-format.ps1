@@ -123,7 +123,7 @@ process {
     Get-Volume | Where-Object { $_.DriveType -eq "CD-ROM" } | Get-DiskImage | Dismount-DiskImage
 
     # Initialize and format Data Disks
-    [array]$dataDisks = Get-Disk | Where-Object { ($_.IsSystem -eq $false) -and ($_.PartitionStyle -eq 'RAW') -and ($_.Location -like "*Adapter 1*") }
+    [array]$dataDisks = Get-Disk | Where-Object { ($_.IsSystem -eq $false) -and ($_.PartitionStyle -eq 'RAW') }
     if ($dataDisks) {
         foreach ($disk in $dataDisks) {
             $config = $diskConfigArray | Where-Object { $_.lun -eq ($disk.Location -split 'LUN ')[1] }
