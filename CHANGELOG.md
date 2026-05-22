@@ -1,3 +1,9 @@
+## v0.2.5 (2026-05-22)
+
+### Fix
+
+- enhance data disk initialization with LUN parsing and fallback logic (#6)
+
 ## v0.2.4 (2026-04-17)
 
 ### Fix
