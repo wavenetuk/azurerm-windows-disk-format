@@ -123,7 +123,22 @@ process {
     Get-Volume | Where-Object { $_.DriveType -eq "CD-ROM" } | Get-DiskImage | Dismount-DiskImage
 
     # Initialize and format Data Disks
-    [array]$dataDisks = Get-Disk | Where-Object { ($_.IsSystem -eq $false) -and ($_.PartitionStyle -eq 'RAW') }
+    [array]$dataDisks = Get-Disk | Where-Object { ($_.IsSystem -eq $false) -and ($_.PartitionStyle -eq 'RAW') } | Sort-Object Number
+    $sequentialFallbackDisks = @()
+
+    if ($dataDisks -and $diskConfigArray.Count -gt 1) {
+        $disksWithParsedLun = @(
+            $dataDisks | Where-Object {
+                ($_.Location -match '(?i)\bLUN\D*(\d+)\b') -or ($_.LocationPath -match '(?i)\bLUN\D*(\d+)\b')
+            }
+        )
+
+        if ($disksWithParsedLun.Count -eq 0 -and $dataDisks.Count -ge $diskConfigArray.Count) {
+            $sequentialFallbackDisks = @($dataDisks | Select-Object -Last $diskConfigArray.Count)
+            Write-Log -Object "Disk Formatting" -Message "Unable to parse LUN metadata from raw disk locations. Falling back to sequential disk ordering for the configured data disks." -Severity Warning -LogPath $LogPath
+        }
+    }
+
     if ($dataDisks) {
         foreach ($disk in $dataDisks) {
             $diskLun = $null
@@ -135,6 +150,14 @@ process {
             }
 
             $config = $diskConfigArray | Where-Object { $_.lun -eq $diskLun }
+
+            if (($null -eq $config) -and ($sequentialFallbackDisks.Number -contains $disk.Number)) {
+                $fallbackDiskIndex = [array]::IndexOf($sequentialFallbackDisks.Number, $disk.Number)
+                if ($fallbackDiskIndex -ge 0 -and $fallbackDiskIndex -lt $diskConfigArray.Count) {
+                    $config = $diskConfigArray[$fallbackDiskIndex]
+                    Write-Log -Object "Disk Formatting" -Message "Using sequential fallback mapping for disk:$($disk.Number) -> configured drive $($config.driveLetter) (config LUN $($config.lun))." -Severity Information -LogPath $LogPath
+                }
+            }
 
             # If LUN parsing fails but there is only one config entry, apply it to the only raw disk.
             if (($null -eq $config) -and ($diskConfigArray.Count -eq 1)) {
